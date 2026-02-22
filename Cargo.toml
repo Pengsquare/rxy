@@ -1,0 +1,17 @@
+[package]
+name = "rxy"
+version = "0.4.2"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["blocking"] }
+quick-xml = "0.37"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+dirs = "5"
+open = "5"
+serde_json = "1"
