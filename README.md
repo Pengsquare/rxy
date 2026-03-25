@@ -39,7 +39,6 @@ A terminal UI for browsing recent arXiv papers, built with Rust and [ratatui](ht
 
 Requires Rust (stable). Install via [rustup](https://rustup.rs) if needed.
 
-````
 ```bash
 git clone <repo>
 cd rxy
