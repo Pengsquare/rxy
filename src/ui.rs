@@ -51,7 +51,7 @@ fn key_hint(pairs: &[(&str, &str)]) -> Paragraph<'static>
         ));
         spans.push(Span::styled(
             format!(" {}", label),
-            Style::default().fg(Color::DarkGray),
+            Style::default(),
         ));
     }
     Paragraph::new(Line::from(spans))
@@ -65,7 +65,7 @@ fn border_style(focused: bool) -> Style
     }
     else
     {
-        Style::default().fg(Color::DarkGray)
+        Style::default()
     }
 }
 
@@ -123,7 +123,7 @@ fn draw_categories(f: &mut Frame, app: &App, area: Rect)
                 };
                 ListItem::new(Line::from(vec![
                     Span::styled(format!("{} {}", star, id), style),
-                    Span::styled(format!(" {}", desc), Style::default().fg(Color::DarkGray)),
+                    Span::styled(format!(" {}", desc), Style::default()),
                 ]))
             })
             .collect();
@@ -132,8 +132,9 @@ fn draw_categories(f: &mut Frame, app: &App, area: Rect)
             .highlight_style(
                 Style::default()
                     .bg(Color::Blue)
-                    .fg(Color::White)
-                    .add_modifier(Modifier::BOLD),
+                    .fg(Color::Rgb(255, 255, 255))
+                    .add_modifier(Modifier::BOLD)
+                    .remove_modifier(Modifier::DIM),
             )
             .highlight_symbol("▶ ");
 
@@ -236,15 +237,15 @@ fn draw_papers_feed(f: &mut Frame, app: &App, area: Rect, focused: bool)
                 let (title_style, date_style) = if is_read
                 {
                     (
-                        Style::default().fg(Color::DarkGray),
-                        Style::default().fg(Color::DarkGray),
+                        Style::default().add_modifier(Modifier::DIM),
+                        Style::default().add_modifier(Modifier::DIM),
                     )
                 }
                 else
                 {
                     (
-                        Style::default().fg(Color::White),
-                        Style::default().fg(Color::DarkGray),
+                        Style::default().add_modifier(Modifier::BOLD),
+                        Style::default(),
                     )
                 };
                 let star = if is_saved
@@ -267,8 +268,9 @@ fn draw_papers_feed(f: &mut Frame, app: &App, area: Rect, focused: bool)
             .highlight_style(
                 Style::default()
                     .bg(Color::Blue)
-                    .fg(Color::White)
-                    .add_modifier(Modifier::BOLD),
+                    .fg(Color::Rgb(255, 255, 255))
+                    .add_modifier(Modifier::BOLD)
+                    .remove_modifier(Modifier::DIM),
             )
             .highlight_symbol("▶ ");
 
@@ -338,15 +340,15 @@ fn draw_papers_saved(f: &mut Frame, app: &App, area: Rect, focused: bool)
                 let (title_style, date_style) = if is_read
                 {
                     (
-                        Style::default().fg(Color::DarkGray),
-                        Style::default().fg(Color::DarkGray),
+                        Style::default().add_modifier(Modifier::DIM),
+                        Style::default().add_modifier(Modifier::DIM),
                     )
                 }
                 else
                 {
                     (
-                        Style::default().fg(Color::White),
-                        Style::default().fg(Color::DarkGray),
+                        Style::default().add_modifier(Modifier::BOLD),
+                        Style::default(),
                     )
                 };
                 ListItem::new(Line::from(vec![
@@ -360,8 +362,9 @@ fn draw_papers_saved(f: &mut Frame, app: &App, area: Rect, focused: bool)
             .highlight_style(
                 Style::default()
                     .bg(Color::Blue)
-                    .fg(Color::White)
-                    .add_modifier(Modifier::BOLD),
+                    .fg(Color::Rgb(255, 255, 255))
+                    .add_modifier(Modifier::BOLD)
+                    .remove_modifier(Modifier::DIM),
             )
             .highlight_symbol("▶ ");
 
@@ -431,7 +434,7 @@ fn draw_abstract(f: &mut Frame, app: &App, area: Rect)
                     "[o] ",
                     Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
                 ),
-                Span::styled("Abstract: ", Style::default().fg(Color::DarkGray)),
+                Span::styled("Abstract: ", Style::default()),
                 Span::styled(paper.link.clone(), Style::default().fg(Color::Blue)),
             ]));
 
@@ -442,7 +445,7 @@ fn draw_abstract(f: &mut Frame, app: &App, area: Rect)
                         "[p] ",
                         Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
                     ),
-                    Span::styled("PDF:      ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("PDF:      ", Style::default()),
                     Span::styled(paper.pdf_link.clone(), Style::default().fg(Color::Blue)),
                 ]));
             }
@@ -501,7 +504,7 @@ fn draw_fav_picker(f: &mut Frame, app: &App, area: Rect)
         {
             ListItem::new(Line::from(vec![
                 Span::styled(id.to_string(), Style::default().fg(Color::White)),
-                Span::styled(format!(" {}", desc), Style::default().fg(Color::DarkGray)),
+                Span::styled(format!(" {}", desc), Style::default()),
             ]))
         })
         .collect();
@@ -552,7 +555,7 @@ fn draw_help(f: &mut Frame, area: Rect)
         Line::from(""),
         Line::from(Span::styled(
             " Press any key to close ",
-            Style::default().fg(Color::DarkGray),
+            Style::default(),
         )),
     ];
 
