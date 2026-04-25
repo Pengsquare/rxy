@@ -10,9 +10,11 @@ pub struct Paper
     pub pdf_link: String,
     pub authors: Vec<String>,
     pub abstract_text: String,
-    #[allow(dead_code)]
     pub categories: Vec<String>,
     pub pub_date: String,
+    /// Relevance score assigned by a topic filter (0 when no filter is active).
+    #[serde(default)]
+    pub score: i32,
 }
 
 /// Fetch recent papers for one or more categories via the arXiv export API.
@@ -284,6 +286,7 @@ struct PaperBuilder
     abstract_text: String,
     categories: Vec<String>,
     pub_date: String,
+    score: i32,
 }
 
 impl PaperBuilder
@@ -303,6 +306,7 @@ impl PaperBuilder
             abstract_text: self.abstract_text,
             categories: self.categories,
             pub_date: self.pub_date,
+            score: self.score,
         })
     }
 }

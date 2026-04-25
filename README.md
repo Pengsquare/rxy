@@ -33,6 +33,7 @@ A terminal UI for browsing recent arXiv papers, built with Rust and [ratatui](ht
 - Save individual papers across sessions
 - Mark papers as read; hide or show read papers
 - Open abstracts or PDFs directly in your browser
+- **Topic filter** — supply a JSON filter to score, hide, and rank papers by relevance
 - All state persists in `~/.config/rxy/`
 
 ## Build
@@ -54,7 +55,36 @@ cp target/release/rxy ~/.local/bin/
 ## Usage
 
 ```bash
-rxy
+rxy                          # plain browser, no filtering
+rxy --filter my-filter.json  # load with topic filter active
+rxy --version                # print version
+rxy --help                   # print usage
+```
+
+### Topic filter
+
+A topic filter is a JSON file that scores every fetched paper against category weights, keyword rules, author rules, and anti-keywords. Papers with a score ≤ 0 are hidden; the rest are sorted highest-score-first. A green `[score]` badge appears next to each title and the Feed panel shows `[filtered]` when a filter is active.
+
+**Generate a starter filter:**
+
+```bash
+rxy --new-filter my-filter.json
+```
+
+This writes a well-commented demo file you can edit to match your research interests. The schema supports:
+
+| Section | Effect |
+|---------|--------|
+| `categories.primary/secondary/tertiary` | Add weight when a paper belongs to that arXiv category |
+| `keyword_rules.<group>` | Add weight when any listed term appears in title or abstract |
+| `author_rules.<tier>` | Add weight when a listed name matches any author |
+| `exclusions.anti_keywords` | Subtract weight (negative terms) to push irrelevant papers below zero |
+| `scoring_thresholds` | Documents what each score band means (informational) |
+
+**Run with the filter:**
+
+```bash
+rxy --filter my-filter.json
 ```
 
 ## Keyboard shortcuts
@@ -73,7 +103,7 @@ rxy
 | Key | Action |
 |-----|--------|
 | `↑` / `↓` / `j` / `k` | Navigate |
-| `Enter` / `Space` | Load feed for th selected category |
+| `Enter` / `Space` | Load feed for the selected category |
 | `f` | Toggle favourite on the highlighted category |
 | `+` / `=` | Open picker to add a new favourite |
 | `-` | Remove the highlighted category from favourites |

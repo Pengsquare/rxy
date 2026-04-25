@@ -162,17 +162,18 @@ fn draw_papers_feed(f: &mut Frame, app: &App, area: Rect, focused: bool)
     let total = app.papers.len();
     let hidden = total - vis_indices.len();
 
+    let filter_label = if app.topic_filter.is_some() { " [filtered]" } else { "" };
     let title = if hidden > 0 && app.hide_read
     {
-        format!(" Feed [{} read hidden — h=show] ", hidden)
+        format!(" Feed{} [{} read hidden — h=show] ", filter_label, hidden)
     }
     else if !app.hide_read && app.read_state.count() > 0
     {
-        " Feed [showing all — h=hide read] ".to_string()
+        format!(" Feed{} [showing all — h=hide read] ", filter_label)
     }
     else
     {
-        " Feed ".to_string()
+        format!(" Feed{} ", filter_label)
     };
 
     let block = Block::default()
@@ -210,6 +211,9 @@ fn draw_papers_feed(f: &mut Frame, app: &App, area: Rect, focused: bool)
     }
     else
     {
+        let filter_active = app.topic_filter.is_some();
+        let title_limit = if filter_active { 48 } else { 56 };
+
         let items: Vec<ListItem> = vis_indices
             .iter()
             .map(|&idx|
@@ -225,8 +229,8 @@ fn draw_papers_feed(f: &mut Frame, app: &App, area: Rect, focused: bool)
                 {
                     format!(" ({})", p.pub_date)
                 };
-                let title: String = p.title.chars().take(56).collect();
-                let title = if p.title.chars().count() > 56
+                let title: String = p.title.chars().take(title_limit).collect();
+                let title = if p.title.chars().count() > title_limit
                 {
                     format!("{}…", title)
                 }
@@ -256,8 +260,20 @@ fn draw_papers_feed(f: &mut Frame, app: &App, area: Rect, focused: bool)
                 {
                     Span::raw("  ")
                 };
+                let score_span = if filter_active
+                {
+                    Span::styled(
+                        format!("[{:>3}] ", p.score),
+                        Style::default().fg(Color::Green),
+                    )
+                }
+                else
+                {
+                    Span::raw("")
+                };
                 ListItem::new(Line::from(vec![
                     star,
+                    score_span,
                     Span::styled(title, title_style),
                     Span::styled(date, date_style),
                 ]))

@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::feed::{fetch_multiple, Paper};
 use crate::paper_faves::PaperFaves;
 use crate::read_state::ReadState;
+use crate::topic_filter::TopicFilter;
 use ratatui::widgets::ListState;
 use std::sync::mpsc::{self, Receiver};
 
@@ -26,6 +27,7 @@ pub struct App
     pub config: Config,
     pub read_state: ReadState,
     pub paper_faves: PaperFaves,
+    pub topic_filter: Option<TopicFilter>,
     pub focus: Panel,
     pub papers_tab: PapersTab,
     pub cat_state: ListState,
@@ -45,7 +47,7 @@ pub struct App
 
 impl App
 {
-    pub fn new() -> Self
+    pub fn new(topic_filter: Option<TopicFilter>) -> Self
     {
         let config = Config::load();
         let mut cat_state = ListState::default();
@@ -59,6 +61,7 @@ impl App
             config,
             read_state: ReadState::load(),
             paper_faves: PaperFaves::load(),
+            topic_filter,
             focus: Panel::Categories,
             papers_tab: PapersTab::Feed,
             cat_state,
@@ -299,10 +302,21 @@ impl App
 
         match outcome
         {
-            Some(Ok((papers, errors))) =>
+            Some(Ok((mut papers, errors))) =>
             {
                 self.feed_rx = None;
                 self.loading = false;
+
+                if let Some(filter) = &self.topic_filter
+                {
+                    for p in &mut papers
+                    {
+                        p.score = filter.score(p);
+                    }
+                    papers.retain(|p| p.score > 0);
+                    papers.sort_by(|a, b| b.score.cmp(&a.score));
+                }
+
                 self.papers = papers;
                 self.paper_state.select(None);
 
