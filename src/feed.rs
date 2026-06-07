@@ -1,6 +1,9 @@
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde::{Deserialize, Serialize};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+const CACHE_TTL_SECS: u64 = 3_600; // 1 hour
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Paper
@@ -17,13 +20,71 @@ pub struct Paper
     pub score: i32,
 }
 
+#[derive(Serialize, Deserialize)]
+struct CachedFeed
+{
+    fetched_at: u64,
+    papers: Vec<Paper>,
+}
+
+fn cache_path(cats: &[String]) -> Option<std::path::PathBuf>
+{
+    let mut sorted = cats.to_vec();
+    sorted.sort();
+    let key = sorted.join("_");
+    dirs::cache_dir().map(|d| d.join("rxy").join(format!("{}.json", key)))
+}
+
+fn load_cache(cats: &[String]) -> Option<Vec<Paper>>
+{
+    let path = cache_path(cats)?;
+    let data = std::fs::read(&path).ok()?;
+    let cached: CachedFeed = serde_json::from_slice(&data).ok()?;
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs();
+    if now.saturating_sub(cached.fetched_at) < CACHE_TTL_SECS
+    {
+        Some(cached.papers)
+    }
+    else
+    {
+        None
+    }
+}
+
+fn save_cache(cats: &[String], papers: &[Paper])
+{
+    let Some(path) = cache_path(cats) else { return };
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let cached = CachedFeed { fetched_at: now, papers: papers.to_vec() };
+    if let Some(parent) = path.parent()
+    {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(data) = serde_json::to_vec(&cached)
+    {
+        let _ = std::fs::write(&path, data);
+    }
+}
+
 /// Fetch recent papers for one or more categories via the arXiv export API.
 /// Uses a single OR-combined request so we don't hammer the endpoint.
-pub fn fetch_multiple(cats: &[String]) -> (Vec<Paper>, Vec<String>)
+/// When `force` is false the result is served from a 1-hour disk cache when available.
+pub fn fetch_multiple(cats: &[String], force: bool) -> (Vec<Paper>, Vec<String>)
 {
     if cats.is_empty()
     {
         return (Vec::new(), Vec::new());
+    }
+
+    if !force
+    {
+        if let Some(papers) = load_cache(cats)
+        {
+            return (papers, Vec::new());
+        }
     }
 
     let search_query = cats
@@ -40,7 +101,11 @@ pub fn fetch_multiple(cats: &[String]) -> (Vec<Paper>, Vec<String>)
 
     match fetch_url(&url)
     {
-        Ok(papers) => (papers, Vec::new()),
+        Ok(papers) =>
+        {
+            save_cache(cats, &papers);
+            (papers, Vec::new())
+        }
         Err(e) => (Vec::new(), vec![e]),
     }
 }
@@ -52,18 +117,44 @@ fn fetch_url(url: &str) -> Result<Vec<Paper>, String>
         .build()
         .map_err(|e| format!("Client build error: {}", e))?;
 
-    let resp = client
-        .get(url)
-        .send()
-        .map_err(|e| format!("HTTP error: {}", e))?;
-
-    if !resp.status().is_success()
+    let mut backoff = Duration::from_secs(3);
+    for attempt in 0..3_u32
     {
-        return Err(format!("HTTP {}", resp.status()));
+        let resp = client
+            .get(url)
+            .send()
+            .map_err(|e| format!("HTTP error: {}", e))?;
+
+        if resp.status().as_u16() == 429
+        {
+            if attempt < 2
+            {
+                let wait = resp
+                    .headers()
+                    .get("retry-after")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|s| s.parse::<u64>().ok())
+                    .map(Duration::from_secs)
+                    .unwrap_or(backoff);
+                std::thread::sleep(wait);
+                backoff *= 2;
+                continue;
+            }
+            return Err(
+                "Rate limited (429). Wait a moment and press 'r' to retry.".to_string(),
+            );
+        }
+
+        if !resp.status().is_success()
+        {
+            return Err(format!("HTTP {}", resp.status()));
+        }
+
+        let body = resp.text().map_err(|e| format!("Read error: {}", e))?;
+        return parse_atom(&body);
     }
 
-    let body = resp.text().map_err(|e| format!("Read error: {}", e))?;
-    parse_atom(&body)
+    Err("Rate limited after retries. Wait a moment and press 'r' to retry.".to_string())
 }
 
 // ── Atom parser ──────────────────────────────────────────────────────────────

@@ -236,7 +236,7 @@ impl App
 
     // ── Feed loading (background thread) ─────────────────────────────────────
 
-    fn spawn_load(&mut self, cats: Vec<String>)
+    fn spawn_load(&mut self, cats: Vec<String>, force: bool)
     {
         let (tx, rx) = mpsc::channel();
         self.feed_rx = Some(rx);
@@ -252,7 +252,7 @@ impl App
         self.status_msg = format!("Loading {}…", label);
         std::thread::spawn(move ||
         {
-            let _ = tx.send(fetch_multiple(&cats));
+            let _ = tx.send(fetch_multiple(&cats, force));
         });
     }
 
@@ -270,7 +270,7 @@ impl App
         {
             self.config.favorites.clone()
         };
-        self.spawn_load(cats);
+        self.spawn_load(cats, false);
     }
 
     pub fn load_feed_for_selected_category(&mut self)
@@ -278,7 +278,7 @@ impl App
         let vis = self.visible_categories();
         if let Some((id, _)) = self.cat_state.selected().and_then(|i| vis.get(i))
         {
-            self.spawn_load(vec![id.to_string()]);
+            self.spawn_load(vec![id.to_string()], false);
         }
     }
 
@@ -446,7 +446,19 @@ impl App
             }
             KeyCode::Char('r') =>
             {
-                self.load_feed();
+                let cats = if self.config.favorites.is_empty()
+                {
+                    CATEGORIES
+                        .iter()
+                        .filter(|(id, _)| id.starts_with("cs."))
+                        .map(|(id, _)| id.to_string())
+                        .collect::<Vec<_>>()
+                }
+                else
+                {
+                    self.config.favorites.clone()
+                };
+                self.spawn_load(cats, true);
             }
             KeyCode::Char('o') =>
             {
